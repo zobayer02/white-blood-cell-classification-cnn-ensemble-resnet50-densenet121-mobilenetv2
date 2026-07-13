@@ -1,4 +1,4 @@
-# Explainable Medical AI for White Blood Cell Classification
+# White Blood Cell Classification using CNN Ensemble Architecture: ResNet50, DenseNet121, MobileNetV2
 
 Flask-based medical imaging web application for **White Blood Cell (WBC) classification** using a **CNN ensemble** with **Grad-CAM**, **LIME**, and a **QEEF-style reliability analysis**.
 
