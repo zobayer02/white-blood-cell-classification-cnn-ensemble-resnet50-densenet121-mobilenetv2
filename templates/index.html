@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Explainable WBC Classification</title>
+
+    <style>
+        :root {
+            --navy: #102a43;
+            --blue: #1769aa;
+            --blue-dark: #0f4f82;
+            --blue-soft: #eaf4fb;
+            --text: #243b53;
+            --muted: #627d98;
+            --border: #d9e2ec;
+            --surface: #ffffff;
+            --background: #f3f7fa;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            margin: 0;
+            color: var(--text);
+            background:
+                radial-gradient(circle at top left, #dceefb 0, transparent 38%),
+                var(--background);
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        .page-shell {
+            width: min(1100px, calc(100% - 32px));
+            margin: 0 auto;
+            padding: 58px 0 28px;
+        }
+
+        .hero {
+            max-width: 880px;
+            margin: 0 auto 30px;
+            text-align: center;
+        }
+
+        .eyebrow {
+            display: inline-block;
+            margin-bottom: 14px;
+            padding: 7px 13px;
+            color: var(--blue-dark);
+            background: var(--blue-soft);
+            border: 1px solid #b8d8ed;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.09em;
+            text-transform: uppercase;
+        }
+
+        h1 {
+            max-width: 1050px;
+            margin: 0 auto;
+            color: var(--navy);
+            font-size: clamp(24px, 3vw, 36px);
+            line-height: 1.25;
+            text-align: center;
+            text-wrap: balance;
+        }
+
+        .subtitle {
+            max-width: 820px;
+            margin: 18px auto 0;
+            color: var(--muted);
+            font-size: 17px;
+            line-height: 1.7;
+        }
+
+        .upload-card {
+            max-width: 740px;
+            margin: 0 auto;
+            padding: 32px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            box-shadow: 0 18px 45px rgba(16, 42, 67, 0.12);
+        }
+
+        .upload-card h2 {
+            margin: 0 0 8px;
+            color: var(--navy);
+            font-size: 24px;
+        }
+
+        .upload-card > p {
+            margin: 0 0 22px;
+            color: var(--muted);
+            line-height: 1.6;
+        }
+
+        .upload-zone {
+            display: block;
+            padding: 30px 22px;
+            text-align: center;
+            background: #f8fbfd;
+            border: 2px dashed #9fbfd5;
+            border-radius: 14px;
+            cursor: pointer;
+            transition: 0.2s ease;
+        }
+
+        .upload-zone:hover {
+            background: var(--blue-soft);
+            border-color: var(--blue);
+        }
+
+        .upload-icon {
+            display: grid;
+            width: 58px;
+            height: 58px;
+            margin: 0 auto 14px;
+            color: var(--blue);
+            background: var(--blue-soft);
+            border-radius: 50%;
+            place-items: center;
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        .image-preview {
+            display: none;
+            width: min(260px, 100%);
+            max-height: 260px;
+            margin: 0 auto 16px;
+            object-fit: contain;
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+        }
+
+        .upload-zone.has-preview .image-preview {
+            display: block;
+        }
+
+        .upload-zone.has-preview .upload-icon {
+            display: none;
+        }
+
+        .upload-label {
+            display: block;
+            color: var(--navy);
+            font-size: 17px;
+            font-weight: 700;
+        }
+
+        .file-name {
+            display: block;
+            margin-top: 8px;
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        input[type="file"] {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+            opacity: 0;
+        }
+
+        .file-note {
+            margin: 14px 0 22px;
+            color: var(--muted);
+            font-size: 13px;
+            text-align: center;
+        }
+
+        .submit-button {
+            width: 100%;
+            padding: 14px 20px;
+            color: white;
+            background: var(--blue);
+            border: 0;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 700;
+            transition: 0.2s ease;
+        }
+
+        .submit-button:hover {
+            background: var(--blue-dark);
+            transform: translateY(-1px);
+        }
+
+        .footer {
+            margin-top: 28px;
+            color: var(--muted);
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-align: center;
+            text-transform: uppercase;
+        }
+
+        .processing-overlay {
+            position: fixed;
+            z-index: 100;
+            inset: 0;
+            display: none;
+            padding: 20px;
+            align-items: center;
+            justify-content: center;
+            background: rgba(8, 28, 45, 0.78);
+            backdrop-filter: blur(6px);
+        }
+
+        .processing-overlay.active {
+            display: flex;
+        }
+
+        .processing-card {
+            width: min(560px, 100%);
+            padding: 30px;
+            background: white;
+            border-radius: 18px;
+            box-shadow: 0 24px 70px rgba(0, 0, 0, 0.28);
+        }
+
+        .processing-card h2 {
+            margin: 0;
+            color: var(--navy);
+            font-size: 25px;
+        }
+
+        .processing-card p {
+            margin: 9px 0 22px;
+            color: var(--muted);
+            line-height: 1.5;
+        }
+
+        .progress-meta {
+            display: flex;
+            margin-bottom: 8px;
+            justify-content: space-between;
+            color: var(--navy);
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .progress-track {
+            height: 13px;
+            overflow: hidden;
+            background: #dfeaf1;
+            border-radius: 999px;
+        }
+
+        .progress-fill {
+            width: 0;
+            height: 100%;
+            background: linear-gradient(90deg, #1769aa, #35a7d4);
+            border-radius: inherit;
+            transition: width 0.45s ease;
+        }
+
+        .processing-steps {
+            display: grid;
+            gap: 9px;
+            margin-top: 22px;
+        }
+
+        .processing-step {
+            display: flex;
+            padding: 10px 12px;
+            align-items: center;
+            gap: 10px;
+            color: #7b8e9e;
+            background: #f6f9fb;
+            border-radius: 8px;
+            font-size: 13px;
+        }
+
+        .processing-step::before {
+            width: 9px;
+            height: 9px;
+            content: "";
+            background: #c5d3dd;
+            border-radius: 50%;
+        }
+
+        .processing-step.active {
+            color: var(--blue-dark);
+            background: var(--blue-soft);
+            font-weight: 700;
+        }
+
+        .processing-step.active::before {
+            background: var(--blue);
+            box-shadow: 0 0 0 5px rgba(23, 105, 170, 0.12);
+        }
+
+        @media (max-width: 640px) {
+            .page-shell {
+                padding-top: 32px;
+            }
+
+            .upload-card,
+            .processing-card {
+                padding: 22px;
+            }
+
+        }
+    </style>
+</head>
+
+<body>
+    <main class="page-shell">
+        <header class="hero">
+            <span class="eyebrow">Explainable Medical AI</span>
+            <h1>White Blood Cell Classification using CNN Ensemble model with Explainable AI for measuring consistency, faithfulness and Abnormality Flagging</h1>
+            <p class="subtitle">
+                Upload WBC Image &rarr; Pre-processing &rarr; CNN Ensemble Classification
+                &rarr; Grad-CAM &amp; LIME Explainability &rarr; QEEF Reliability Analysis
+                &rarr; Abnormality Flagging
+            </p>
+        </header>
+
+        <section class="upload-card">
+            <h2>Analyze a WBC Image</h2>
+            <p>
+                Upload a white blood cell microscopy image to generate an ensemble
+                prediction and explainability report.
+            </p>
+
+            <form id="prediction-form" action="{{ url_for('predict') }}" method="POST" enctype="multipart/form-data">
+                <input id="job-id" type="hidden" name="job_id">
+                <label class="upload-zone" id="upload-zone" for="file-input">
+                    <img class="image-preview" id="image-preview" alt="Selected WBC image preview">
+                    <span class="upload-icon">+</span>
+                    <span class="upload-label">Choose a WBC image</span>
+                    <span class="file-name" id="file-name">No image selected</span>
+                </label>
+                <input id="file-input" type="file" name="file" accept=".jpg,.jpeg,.png,.bmp,image/*" required>
+
+                <p class="file-note">
+                    Accepted file types: JPG, JPEG, PNG, BMP. Maximum file size: 10 MB.
+                </p>
+
+                <button class="submit-button" type="submit">Run Explainable Classification</button>
+            </form>
+        </section>
+
+    </main>
+
+    <div class="processing-overlay" id="processing-overlay" aria-live="polite">
+        <div class="processing-card">
+            <h2>Generating Explainable AI Report</h2>
+            <p id="processing-message">Preparing uploaded image...</p>
+
+            <div class="progress-meta">
+                <span>Processing</span>
+                <span id="progress-percentage">0%</span>
+            </div>
+            <div class="progress-track">
+                <div class="progress-fill" id="progress-fill"></div>
+            </div>
+
+            <div class="processing-steps">
+                <div class="processing-step active">Uploading and preprocessing image</div>
+                <div class="processing-step">Running CNN ensemble and class prediction</div>
+                <div class="processing-step">Generating Grad-CAM explanations</div>
+                <div class="processing-step">Generating LIME explanation</div>
+                <div class="processing-step">Computing consistency and QEEF reliability</div>
+                <div class="processing-step">Applying abnormality flagging</div>
+                <div class="processing-step">Preparing final explainability report</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById("prediction-form");
+        const fileInput = document.getElementById("file-input");
+        const fileName = document.getElementById("file-name");
+        const uploadZone = document.getElementById("upload-zone");
+        const imagePreview = document.getElementById("image-preview");
+        const jobIdInput = document.getElementById("job-id");
+        const overlay = document.getElementById("processing-overlay");
+        const progressFill = document.getElementById("progress-fill");
+        const progressPercentage = document.getElementById("progress-percentage");
+        const processingMessage = document.getElementById("processing-message");
+        const steps = Array.from(document.querySelectorAll(".processing-step"));
+
+        fileInput.addEventListener("change", () => {
+            const selectedFile = fileInput.files[0];
+            fileName.textContent = selectedFile
+                ? selectedFile.name
+                : "No image selected";
+
+            if (!selectedFile) {
+                imagePreview.removeAttribute("src");
+                uploadZone.classList.remove("has-preview");
+                return;
+            }
+
+            imagePreview.src = URL.createObjectURL(selectedFile);
+            imagePreview.onload = () => URL.revokeObjectURL(imagePreview.src);
+            uploadZone.classList.add("has-preview");
+        });
+
+        form.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            overlay.classList.add("active");
+            const jobId = crypto.randomUUID();
+            jobIdInput.value = jobId;
+
+            const pollProgress = window.setInterval(async () => {
+                try {
+                    const progressResponse = await fetch(`/progress/${jobId}`);
+                    const progress = await progressResponse.json();
+
+                    progressFill.style.width = `${progress.percentage}%`;
+                    progressPercentage.textContent = `${progress.percentage}%`;
+                    processingMessage.textContent = progress.message;
+                    steps.forEach((step, index) => {
+                        step.classList.toggle("active", index <= progress.step);
+                    });
+                } catch (error) {
+                    processingMessage.textContent = "Waiting for server progress...";
+                }
+            }, 500);
+
+            try {
+                const response = await fetch(form.action, {
+                    method: "POST",
+                    body: new FormData(form)
+                });
+                const resultPage = await response.text();
+                window.clearInterval(pollProgress);
+
+                progressFill.style.width = "100%";
+                progressPercentage.textContent = "100%";
+                processingMessage.textContent = "Analysis complete. Opening report...";
+                steps.forEach((step) => step.classList.add("active"));
+
+                window.setTimeout(() => {
+                    document.open();
+                    document.write(resultPage);
+                    document.close();
+                }, 650);
+            } catch (error) {
+                window.clearInterval(pollProgress);
+                progressFill.style.width = "100%";
+                progressPercentage.textContent = "Failed";
+                processingMessage.textContent = "Processing failed. Please reload and try again.";
+            }
+        });
+    </script>
+</body>
+</html>

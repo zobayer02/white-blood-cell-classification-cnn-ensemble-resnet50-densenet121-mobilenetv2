@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WBC Explainability Report</title>
+
+    <style>
+        :root {
+            --navy: #102a43;
+            --blue: #1769aa;
+            --blue-dark: #0f4f82;
+            --blue-soft: #eaf4fb;
+            --text: #243b53;
+            --muted: #627d98;
+            --border: #d9e2ec;
+            --surface: #ffffff;
+            --background: #f3f7fa;
+            --green: #18794e;
+            --green-soft: #dcf5e8;
+            --orange: #a15c00;
+            --orange-soft: #fff1cf;
+            --red: #b42318;
+            --red-soft: #fde2e1;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            color: var(--text);
+            background: var(--background);
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        .page-shell {
+            width: min(1100px, calc(100% - 32px));
+            margin: 0 auto;
+            padding: 34px 0 48px;
+        }
+
+        .report-header {
+            display: flex;
+            margin-bottom: 22px;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+        }
+
+        .eyebrow {
+            margin: 0 0 7px;
+            color: var(--blue);
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+        }
+
+        h1,
+        h2,
+        h3,
+        p {
+            margin-top: 0;
+        }
+
+        h1 {
+            margin-bottom: 0;
+            color: var(--navy);
+            font-size: clamp(27px, 4vw, 38px);
+        }
+
+        .section-card {
+            margin-bottom: 22px;
+            padding: 26px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            box-shadow: 0 10px 26px rgba(16, 42, 67, 0.07);
+        }
+
+        .section-heading {
+            display: flex;
+            margin-bottom: 20px;
+            align-items: center;
+            gap: 12px;
+            color: var(--navy);
+        }
+
+        .section-letter {
+            display: grid;
+            width: 32px;
+            height: 32px;
+            flex: 0 0 auto;
+            color: white;
+            background: var(--blue);
+            border-radius: 8px;
+            place-items: center;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .section-heading h2 {
+            margin: 0;
+            font-size: 22px;
+        }
+
+        .explanation-text {
+            margin: -8px 0 20px;
+            color: var(--muted);
+            line-height: 1.65;
+        }
+
+        .hero-grid {
+            display: grid;
+            grid-template-columns: 380px 1fr;
+            gap: 26px;
+        }
+
+        .uploaded-image-card,
+        .prediction-card {
+            padding: 20px;
+            background: #f8fbfd;
+            border: 1px solid var(--border);
+            border-radius: 13px;
+        }
+
+        .uploaded-image-card h3,
+        .prediction-card h3 {
+            margin-bottom: 14px;
+            color: var(--navy);
+            font-size: 16px;
+        }
+
+        .uploaded-image-card img {
+            display: block;
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            object-fit: cover;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+        }
+
+        .final-class {
+            margin-bottom: 8px;
+            color: var(--blue-dark);
+            font-size: clamp(32px, 5vw, 48px);
+            font-weight: 800;
+        }
+
+        .confidence {
+            margin-bottom: 17px;
+            color: var(--text);
+            font-size: 19px;
+            font-weight: 700;
+        }
+
+        .flag {
+            display: inline-flex;
+            padding: 8px 13px;
+            align-items: center;
+            border-radius: 999px;
+            font-size: 13px;
+            font-weight: 800;
+        }
+
+        .Reliable {
+            color: var(--green);
+            background: var(--green-soft);
+        }
+
+        .Review {
+            color: var(--orange);
+            background: var(--orange-soft);
+        }
+
+        .Suspicious {
+            color: var(--red);
+            background: var(--red-soft);
+        }
+
+        .prediction-details {
+            display: grid;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .prediction-details p {
+            margin: 0;
+            padding: 12px 14px;
+            color: var(--muted);
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            line-height: 1.5;
+        }
+
+        .prediction-details strong {
+            color: var(--text);
+        }
+
+        .table-wrap {
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            padding: 14px 15px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            color: var(--navy);
+            background: #edf4f8;
+            font-size: 13px;
+            letter-spacing: 0.02em;
+        }
+
+        td {
+            color: #334e68;
+            font-size: 14px;
+        }
+
+        tr:last-child td {
+            border-bottom: 0;
+        }
+
+        .probability-value {
+            color: var(--blue-dark);
+            font-weight: 800;
+            white-space: nowrap;
+        }
+
+        .probability-track {
+            min-width: 230px;
+            height: 12px;
+            overflow: hidden;
+            background: #e3edf3;
+            border-radius: 999px;
+        }
+
+        .probability-fill {
+            width: var(--probability);
+            height: 100%;
+            background: linear-gradient(90deg, var(--blue), #36a4cf);
+            border-radius: inherit;
+        }
+
+        .gradcam-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 18px;
+        }
+
+        .image-card {
+            padding: 15px;
+            background: #f8fbfd;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .image-card h3 {
+            margin-bottom: 13px;
+            color: var(--navy);
+            font-size: 16px;
+        }
+
+        .image-card img {
+            display: block;
+            width: 100%;
+            border: 1px solid var(--border);
+            border-radius: 9px;
+        }
+
+        .lime-container {
+            max-width: 460px;
+            margin: 0 auto;
+        }
+
+        .explanation-error {
+            padding: 15px;
+            color: var(--red);
+            background: var(--red-soft);
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .qeef-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 14px;
+        }
+
+        .metric-card {
+            display: flex;
+            min-height: 104px;
+            padding: 16px;
+            flex-direction: column;
+            justify-content: space-between;
+            gap: 10px;
+            background: #f8fbfd;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+        }
+
+        .metric-card span {
+            color: var(--muted);
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .metric-card strong {
+            color: var(--navy);
+            font-size: 20px;
+        }
+
+        .metric-card.primary {
+            background: var(--blue-soft);
+            border-color: #a7cde5;
+        }
+
+        .metric-card.primary strong {
+            color: var(--blue-dark);
+            font-size: 30px;
+        }
+
+        .qeef-reason {
+            margin-top: 15px;
+            padding: 15px;
+            color: #334e68;
+            background: #f5f8fa;
+            border-left: 4px solid var(--blue);
+            border-radius: 7px;
+            line-height: 1.55;
+        }
+
+        .button {
+            display: inline-flex;
+            padding: 12px 18px;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            background: var(--blue);
+            border: 0;
+            border-radius: 9px;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 800;
+            transition: 0.2s ease;
+        }
+
+        .button:hover {
+            background: var(--blue-dark);
+            transform: translateY(-1px);
+        }
+
+        .button:disabled {
+            cursor: wait;
+            opacity: 0.72;
+            transform: none;
+        }
+
+        .report-footer {
+            margin-top: 10px;
+            text-align: center;
+        }
+
+        @media (max-width: 900px) {
+            .hero-grid,
+            .gradcam-grid,
+            .qeef-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .uploaded-image-card {
+                max-width: 500px;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .page-shell {
+                width: min(100% - 20px, 1100px);
+                padding-top: 20px;
+            }
+
+            .section-card {
+                padding: 18px;
+            }
+
+            .report-header {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <main class="page-shell">
+        <header class="report-header">
+            <div>
+                <p class="eyebrow">Explainable Ensemble Analysis</p>
+                <h1>WBC Classification Report</h1>
+            </div>
+            <button
+                id="download-report-image"
+                class="button"
+                type="button"
+            >
+                Download High-Resolution Screenshot
+            </button>
+        </header>
+
+        <section class="section-card">
+            <div class="section-heading">
+                <span class="section-letter">A</span>
+                <h2>Final Ensemble Prediction</h2>
+            </div>
+
+            <div class="hero-grid">
+                <div class="uploaded-image-card">
+                    <h3>Uploaded WBC Image</h3>
+                    <img src="{{ image_url }}" alt="Uploaded WBC Image">
+                </div>
+
+                <div class="prediction-card">
+                    <h3>Weighted Soft Voting Result</h3>
+                    <div class="final-class">{{ results.ensemble.pred_class }}</div>
+                    <div class="confidence">
+                        Confidence: {{ results.ensemble.confidence_percent }}%
+                    </div>
+
+                    {% if reliability.flag == "Reliable" %}
+                        <span class="flag Reliable">Reliable</span>
+                    {% elif reliability.flag == "Review Needed" %}
+                        <span class="flag Review">Review Needed</span>
+                    {% else %}
+                        <span class="flag Suspicious">Suspicious</span>
+                    {% endif %}
+
+                    <div class="prediction-details">
+                        <p>
+                            <strong>Model Agreement:</strong>
+                            {{ reliability.agreement_label }}
+                        </p>
+                        <p>
+                            <strong>Reliability Reason:</strong>
+                            {{ reliability.reason }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section-card">
+            <div class="section-heading">
+                <span class="section-letter">B</span>
+                <h2>Individual Model Predictions</h2>
+            </div>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Model</th>
+                            <th>Predicted Class</th>
+                            <th>Confidence</th>
+                            <th>Ensemble Weight</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>ResNet50</strong></td>
+                            <td>{{ results.resnet.pred_class }}</td>
+                            <td>{{ "%.2f"|format(results.resnet.confidence * 100) }}%</td>
+                            <td>{{ weights.ResNet50 }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>DenseNet121</strong></td>
+                            <td>{{ results.densenet.pred_class }}</td>
+                            <td>{{ "%.2f"|format(results.densenet.confidence * 100) }}%</td>
+                            <td>{{ weights.DenseNet121 }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>MobileNetV2</strong></td>
+                            <td>{{ results.mobilenet.pred_class }}</td>
+                            <td>{{ "%.2f"|format(results.mobilenet.confidence * 100) }}%</td>
+                            <td>{{ weights.MobileNetV2 }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="section-card">
+            <div class="section-heading">
+                <span class="section-letter">C</span>
+                <h2>Class Probability Distribution</h2>
+            </div>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>WBC Class</th>
+                            <th>Probability</th>
+                            <th>Distribution</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in results.ensemble.class_probabilities %}
+                        <tr>
+                            <td><strong>{{ item.class_name }}</strong></td>
+                            <td class="probability-value">{{ item.percentage }}%</td>
+                            <td>
+                                <div class="probability-track">
+                                    <div class="probability-fill" style="--probability: {{ item.percentage }}%;"></div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="section-card">
+            <div class="section-heading">
+                <span class="section-letter">D</span>
+                <h2>Grad-CAM Explainability</h2>
+            </div>
+            <p class="explanation-text">
+                Grad-CAM highlights the image regions that contributed most to each CNN model's decision.
+            </p>
+
+            <div class="gradcam-grid">
+                <article class="image-card">
+                    <h3>ResNet50 Grad-CAM</h3>
+                    <img src="{{ gradcam_urls.resnet }}" alt="ResNet50 Grad-CAM">
+                </article>
+                <article class="image-card">
+                    <h3>DenseNet121 Grad-CAM</h3>
+                    <img src="{{ gradcam_urls.densenet }}" alt="DenseNet121 Grad-CAM">
+                </article>
+                <article class="image-card">
+                    <h3>MobileNetV2 Grad-CAM</h3>
+                    <img src="{{ gradcam_urls.mobilenet }}" alt="MobileNetV2 Grad-CAM">
+                </article>
+            </div>
+        </section>
+
+        <section class="section-card">
+            <div class="section-heading">
+                <span class="section-letter">E</span>
+                <h2>LIME Explanation</h2>
+            </div>
+            <p class="explanation-text">
+                LIME explains the ensemble prediction using local perturbation-based superpixel analysis.
+            </p>
+
+            {% if lime_url %}
+                <div class="lime-container">
+                    <div class="image-card">
+                        <img src="{{ lime_url }}" alt="Ensemble LIME Explanation">
+                    </div>
+                </div>
+            {% else %}
+                <p class="explanation-error">
+                    LIME explanation could not be generated.
+                </p>
+            {% endif %}
+        </section>
+
+        <section class="section-card">
+            <div class="section-heading">
+                <span class="section-letter">F</span>
+                <h2>QEEF Reliability Analysis</h2>
+            </div>
+            <p class="explanation-text">
+                QEEF combines prediction confidence, model agreement, and Grad-CAM consistency to generate a reliability flag.
+            </p>
+
+            <div class="qeef-grid">
+                <div class="metric-card primary">
+                    <span>QEEF Trust Score</span>
+                    <strong>
+                        {% if reliability.qeef_trust_percentage is not none %}
+                            {{ reliability.qeef_trust_percentage }}%
+                        {% else %}
+                            Unavailable
+                        {% endif %}
+                    </strong>
+                </div>
+
+                <div class="metric-card">
+                    <span>Ensemble Confidence</span>
+                    <strong>{{ "%.2f"|format(reliability.ensemble_confidence * 100) }}%</strong>
+                </div>
+
+                <div class="metric-card">
+                    <span>Model Agreement</span>
+                    <strong>
+                        {{ reliability.agreement_label }}
+                        ({{ "%.2f"|format(reliability.agreement_score) }})
+                    </strong>
+                </div>
+
+                <div class="metric-card">
+                    <span>Grad-CAM Cosine Similarity</span>
+                    <strong>
+                        {% if reliability.average_cosine_similarity is not none %}
+                            {{ "%.4f"|format(reliability.average_cosine_similarity) }}
+                        {% else %}
+                            Unavailable
+                        {% endif %}
+                    </strong>
+                </div>
+
+                <div class="metric-card">
+                    <span>Grad-CAM SSIM Similarity</span>
+                    <strong>
+                        {% if reliability.average_ssim_similarity is not none %}
+                            {{ "%.4f"|format(reliability.average_ssim_similarity) }}
+                        {% else %}
+                            Unavailable
+                        {% endif %}
+                    </strong>
+                </div>
+
+                <div class="metric-card">
+                    <span>Final Reliability Flag</span>
+                    <strong>
+                        <span class="flag {{ reliability.flag.split(' ')[0] }}">
+                            {{ reliability.flag }}
+                        </span>
+                    </strong>
+                </div>
+            </div>
+
+            <div class="qeef-reason">
+                <strong>Reason:</strong> {{ reliability.reason }}
+            </div>
+        </section>
+
+        <footer class="report-footer">
+            <a class="button" href="{{ url_for('index') }}">Upload Another Image</a>
+        </footer>
+    </main>
+
+    <script src="{{ url_for('static', filename='vendor/html2canvas.min.js') }}"></script>
+    <script>
+        const downloadButton = document.getElementById("download-report-image");
+
+        downloadButton.addEventListener("click", async () => {
+            if (downloadButton.dataset.capturing === "true") {
+                return;
+            }
+
+            downloadButton.dataset.capturing = "true";
+
+            try {
+                await Promise.all(
+                    Array.from(document.images).map((image) => {
+                        if (image.complete) {
+                            return Promise.resolve();
+                        }
+
+                        return new Promise((resolve) => {
+                            image.addEventListener("load", resolve, { once: true });
+                            image.addEventListener("error", resolve, { once: true });
+                        });
+                    })
+                );
+
+                const canvas = await html2canvas(document.body, {
+                    scale: 2,
+                    useCORS: true,
+                    backgroundColor: "#f3f7fa",
+                    logging: false,
+                    width: document.documentElement.scrollWidth,
+                    height: document.documentElement.scrollHeight,
+                    windowWidth: document.documentElement.scrollWidth,
+                    windowHeight: document.documentElement.scrollHeight
+                });
+
+                const link = document.createElement("a");
+                link.download = "wbc-classification-full-page-screenshot.png";
+                link.href = canvas.toDataURL("image/png", 1);
+                link.click();
+            } catch (error) {
+                window.alert("Screenshot generation failed. Please reload and try again.");
+            } finally {
+                delete downloadButton.dataset.capturing;
+            }
+        });
+    </script>
+</body>
+</html>
